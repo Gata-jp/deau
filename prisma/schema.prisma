@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  OTHER
+}
+
+enum PreferenceGender {
+  MALE
+  FEMALE
+  NON_BINARY
+  ANY
+}
+
+enum MatchStatus {
+  PENDING
+  MATCHED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum CancellationBy {
+  USER_A
+  USER_B
+  SYSTEM
+}
+
+model User {
+  id               String            @id @default(cuid())
+  nickname         String            @db.VarChar(40)
+  birthDate        DateTime          @db.Date
+  gender           Gender
+  preferenceGender PreferenceGender  @default(ANY)
+  matchingEnabled  Boolean           @default(true)
+  lastMatchedAt    DateTime?
+  lastMatchedUserId String?
+  matchWaitStartedAt DateTime?
+
+  nearestStationId String?
+  nearestStation   Station?          @relation("NearestStation", fields: [nearestStationId], references: [id], onDelete: SetNull)
+
+  stripeCustomerId String?           @unique
+  penaltyPoints    Int               @default(0)
+  isActive         Boolean           @default(true)
+
+  availabilities   Availability[]
+  sentMessages     ChatMessage[]     @relation("MessageSender")
+  matchesAsUserA   Match[]           @relation("MatchUserA")
+  matchesAsUserB   Match[]           @relation("MatchUserB")
+  tags             UserTag[]
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([nearestStationId])
+  @@index([gender, preferenceGender])
+  @@index([matchingEnabled, isActive])
+  @@index([lastMatchedUserId])
+}
+
+model Availability {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startAt   DateTime
+  endAt     DateTime
+  isBooked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchAsA  Match[]  @relation("MatchAvailabilityA")
+  matchAsB  Match[]  @relation("MatchAvailabilityB")
+
+  @@index([userId, startAt, endAt])
+  @@index([startAt, endAt])
+}
+
+model Match {
+  id                  String         @id @default(cuid())
+
+  userAId             String
+  userBId             String
+  userA               User           @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Restrict)
+  userB               User           @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Restrict)
+
+  userAAvailabilityId String?
+  userBAvailabilityId String?
+  userAAvailability   Availability?  @relation("MatchAvailabilityA", fields: [userAAvailabilityId], references: [id], onDelete: SetNull)
+  userBAvailability   Availability?  @relation("MatchAvailabilityB", fields: [userBAvailabilityId], references: [id], onDelete: SetNull)
+
+  meetupStationId     String
+  meetupStation       Station        @relation("MeetupStation", fields: [meetupStationId], references: [id], onDelete: Restrict)
+  meetupAt            DateTime
+  travelMinutes       Int?
+  travelTimeBucket    Int?
+  matchedByBatchAt    DateTime?
+  userAAgeAtMatch     Int?
+  userBAgeAtMatch     Int?
+
+  status              MatchStatus    @default(PENDING)
+  userACheckedInAt    DateTime?
+  userBCheckedInAt    DateTime?
+  cancelledAt         DateTime?
+  cancellationBy      CancellationBy?
+  cancelReason        String?        @db.VarChar(300)
+
+  chatMessages        ChatMessage[]
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([userAId])
+  @@index([userBId])
+  @@index([meetupStationId, meetupAt])
+  @@index([status, meetupAt])
+  @@index([matchedByBatchAt])
+  @@index([travelTimeBucket, meetupAt])
+  @@unique([userAId, userBId, meetupAt])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  body      String   @db.VarChar(1000)
+  sentAt    DateTime @default(now())
+
+  @@index([matchId, sentAt])
+  @@index([senderId, sentAt])
+}
+
+model Station {
+  id           String    @id @default(cuid())
+  name         String    @db.VarChar(120)
+  kana         String?   @db.VarChar(120)
+  lineName     String?   @db.VarChar(120)
+  operatorName String?   @db.VarChar(120)
+  latitude     Decimal?  @db.Decimal(9, 6)
+  longitude    Decimal?  @db.Decimal(9, 6)
+  geohash      String?   @db.VarChar(20)
+  externalCode String?   @unique
+
+  usersNearest  User[]   @relation("NearestStation")
+  meetupMatches Match[]  @relation("MeetupStation")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([name])
+  @@index([lineName, name])
+  @@index([latitude, longitude])
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique @db.VarChar(40)
+  users     UserTag[]
+  createdAt DateTime  @default(now())
+}
+
+model UserTag {
+  userId    String
+  tagId     String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([userId, tagId])
+  @@index([tagId])
+}

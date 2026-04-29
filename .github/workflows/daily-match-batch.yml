@@ -1,0 +1,30 @@
+name: Daily Match Batch
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily match batch
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          MATCH_BATCH_SECRET: ${{ secrets.MATCH_BATCH_SECRET }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is required"
+            exit 1
+          fi
+
+          if [ -z "$MATCH_BATCH_SECRET" ]; then
+            echo "MATCH_BATCH_SECRET secret is required"
+            exit 1
+          fi
+
+          curl --fail-with-body \
+            -X POST \
+            -H "x-batch-secret: $MATCH_BATCH_SECRET" \
+            "$APP_BASE_URL/api/matches/run"
