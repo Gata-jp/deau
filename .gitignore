@@ -25,3 +25,4 @@ pnpm-debug.log*
 # prisma sqlite/dev artifacts
 *.db
 *.db-journal
+.vercel

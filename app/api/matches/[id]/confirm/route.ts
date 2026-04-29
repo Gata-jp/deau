@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError, handleApiError, ok } from "../../../../lib/api";
-import { ensureMatchParticipant, getAuthUserId } from "../../../../lib/auth";
+import { ensureMatchParticipant, ensureProfileCompleted, getAuthUserId } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
 import { expireMatchIfTimedOut } from "../../../../lib/match-timeout";
 
@@ -12,7 +12,8 @@ type Context = {
 
 export async function POST(_request: Request, context: Context) {
   try {
-    const userId = getAuthUserId(_request);
+    const userId = await getAuthUserId(_request);
+    await ensureProfileCompleted(userId);
     const { id } = await context.params;
     const target = await prisma.match.findUnique({
       where: { id },

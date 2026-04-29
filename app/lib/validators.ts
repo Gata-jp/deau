@@ -19,3 +19,11 @@ export const cancelMatchSchema = z.object({
 export const postMessageSchema = z.object({
   body: z.string().trim().min(1).max(1000),
 });
+
+export const updateProfileSchema = z.object({
+  nickname: z.string().trim().min(1).max(40),
+  birthDate: z.coerce.date(),
+  gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER"]),
+  preferenceGender: z.enum(["MALE", "FEMALE", "NON_BINARY", "ANY"]),
+  nearestStationId: z.string().cuid(),
+});

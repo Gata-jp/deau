@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { AuthSyncGate } from "./components/auth-sync-gate";
 
 export const metadata: Metadata = {
   title: "deau",
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <AuthSyncGate />
+        {children}
+      </body>
     </html>
   );
 }

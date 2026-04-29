@@ -37,6 +37,8 @@ enum CancellationBy {
 
 model User {
   id               String            @id @default(cuid())
+  authUserId       String?           @unique
+  email            String?           @unique
   nickname         String            @db.VarChar(40)
   birthDate        DateTime          @db.Date
   gender           Gender
@@ -60,9 +62,12 @@ model User {
   tags             UserTag[]
 
   createdAt        DateTime          @default(now())
+  lastLoginAt      DateTime?
   updatedAt        DateTime          @updatedAt
 
   @@index([nearestStationId])
+  @@index([authUserId])
+  @@index([email])
   @@index([gender, preferenceGender])
   @@index([matchingEnabled, isActive])
   @@index([lastMatchedUserId])

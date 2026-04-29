@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import { handleApiError, ok, ApiError } from "../../lib/api";
 import { createAvailabilitySchema } from "../../lib/validators";
-import { ensureActiveUser, getAuthUserId } from "../../lib/auth";
+import { ensureActiveUser, ensureProfileCompleted, getAuthUserId } from "../../lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const userId = getAuthUserId(request);
+    const userId = await getAuthUserId(request);
     await ensureActiveUser(userId);
+    await ensureProfileCompleted(userId);
     const body = createAvailabilitySchema.parse(await request.json());
 
     const start = body.startAt;

@@ -60,7 +60,7 @@ npm run db:seed
 
 ### 2.4 API の認証（現状）
 
-開発用の暫定として、保護された API は **`x-user-id` ヘッダー**（Prisma の `User.id`）を要求します。本番では **Supabase Auth** や NextAuth などに置き換え、セッションからユーザー ID を解決する想定です。
+保護された API は **Supabase Auth のアクセストークン**（`Authorization: Bearer <token>`）を要求します。トークンの `sub`（Supabase User ID）は原則 `User.authUserId` と照合し、後方互換として `User.id` でも解決します。
 
 日次マッチングバッチの起動 API である `POST /api/matches/run` は **`x-batch-secret` ヘッダー** を要求します。値は `.env` の `MATCH_BATCH_SECRET` と一致させてください。
 
@@ -69,6 +69,9 @@ npm run db:seed
 ## 3. Implemented API endpoints
 
 - `POST /api/availabilities`
+- `POST /api/auth/sync`
+- `GET /api/profile/me`
+- `PUT /api/profile/me`
 - `POST /api/matches/run`
 - `POST /api/matches/[id]/confirm`
 - `POST /api/matches/[id]/checkin`
@@ -99,6 +102,13 @@ npm run db:seed
 - `POST /api/matches/[id]/messages`
   - only allowed when status is `MATCHED` or `COMPLETED`
   - if chat window is closed => `403 CHAT_WINDOW_CLOSED`
+- `POST /api/auth/sync`
+  - validates `Authorization: Bearer <token>` via Supabase Auth
+  - upserts app user by `authUserId`
+  - returns `needsProfileSetup` when required profile fields are still missing
+- `PUT /api/profile/me`
+  - updates required profile fields (`nickname`, `birthDate`, `gender`, `preferenceGender`, `nearestStationId`)
+  - turns `matchingEnabled` on after successful setup
 
 ## 5. 22時自動実行の設定
 
