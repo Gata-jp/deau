@@ -26,6 +26,56 @@ const preferenceGenders = [
   { value: "ANY", label: "こだわらない" },
 ] as const;
 
+const prefectures = [
+  "北海道",
+  "青森県",
+  "岩手県",
+  "宮城県",
+  "秋田県",
+  "山形県",
+  "福島県",
+  "茨城県",
+  "栃木県",
+  "群馬県",
+  "埼玉県",
+  "千葉県",
+  "東京都",
+  "神奈川県",
+  "新潟県",
+  "富山県",
+  "石川県",
+  "福井県",
+  "山梨県",
+  "長野県",
+  "岐阜県",
+  "静岡県",
+  "愛知県",
+  "三重県",
+  "滋賀県",
+  "京都府",
+  "大阪府",
+  "兵庫県",
+  "奈良県",
+  "和歌山県",
+  "鳥取県",
+  "島根県",
+  "岡山県",
+  "広島県",
+  "山口県",
+  "徳島県",
+  "香川県",
+  "愛媛県",
+  "高知県",
+  "福岡県",
+  "佐賀県",
+  "長崎県",
+  "熊本県",
+  "大分県",
+  "宮崎県",
+  "鹿児島県",
+  "沖縄県",
+] as const;
+
 export function ProfileSetupForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
@@ -43,6 +93,7 @@ export function ProfileSetupForm() {
   const [stationSearched, setStationSearched] = useState(false);
   const [selectedStationLabel, setSelectedStationLabel] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState("");
 
   const selectedStation = useMemo(
@@ -78,6 +129,52 @@ export function ProfileSetupForm() {
       setStationLoading(false);
     }
   }
+
+  useEffect(() => {
+    async function loadMyProfile() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+
+        const response = await fetch("/api/profile/me", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+        const json = (await response.json()) as {
+          ok?: boolean;
+          data?: {
+            user?: {
+              nickname?: string;
+              birthDate?: string;
+              gender?: (typeof genders)[number]["value"];
+              preferenceGender?: (typeof preferenceGenders)[number]["value"];
+              nearestStationId?: string | null;
+              prefecture?: string | null;
+              city?: string | null;
+              areaNote?: string | null;
+            };
+          };
+        };
+        if (!response.ok || !json.ok || !json.data?.user) return;
+        const user = json.data.user;
+        if (user.nickname) setNickname(user.nickname);
+        if (user.birthDate) setBirthDate(user.birthDate.slice(0, 10));
+        if (user.gender) setGender(user.gender);
+        if (user.preferenceGender) setPreferenceGender(user.preferenceGender);
+        if (user.nearestStationId) setNearestStationId(user.nearestStationId);
+        if (user.prefecture) setPrefecture(user.prefecture);
+        if (user.city) setCity(user.city);
+        if (user.areaNote) setAreaNote(user.areaNote);
+      } finally {
+        setInitializing(false);
+      }
+    }
+
+    void loadMyProfile();
+  }, []);
 
   useEffect(() => {
     void searchStations("");
@@ -143,7 +240,11 @@ export function ProfileSetupForm() {
         className="mb-6"
       >
         <h1 className="text-2xl font-semibold text-gray-900">プロフィール設定</h1>
-        <p className="mt-2 text-sm text-gray-600">あなたの内面を、少しだけ教えてください</p>
+        <p className="mt-2 text-sm text-gray-600">
+          あなたの内面を、少しだけ教えてください
+          <br />
+          後からいつでも修正できます。
+        </p>
       </motion.div>
 
       <form onSubmit={onSubmit} className="space-y-5">
@@ -188,13 +289,19 @@ export function ProfileSetupForm() {
         >
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">都道府県</span>
-            <input
+            <select
               value={prefecture}
               onChange={(e) => setPrefecture(e.target.value)}
               required
-              placeholder="東京都"
               className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
-            />
+            >
+              <option value="">選択してください</option>
+              {prefectures.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-gray-700">市区町村</span>
@@ -310,6 +417,9 @@ export function ProfileSetupForm() {
           </button>
 
           <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+            <p className="px-2 pb-2 text-xs text-gray-500">
+              {stationLoading ? "検索中..." : `${stations.length}件ヒット`}
+            </p>
             {stations.length > 0 ? (
               <div className="space-y-1">
                 {stations.map((station) => (
@@ -355,15 +465,15 @@ export function ProfileSetupForm() {
 
         <motion.button
           type="submit"
-          disabled={loading || !isFormComplete}
-          whileTap={{ scale: loading || !isFormComplete ? 1 : 0.98 }}
+          disabled={loading || initializing || !isFormComplete}
+          whileTap={{ scale: loading || initializing || !isFormComplete ? 1 : 0.98 }}
           className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white transition-all duration-300 ${
-            loading || !isFormComplete
+            loading || initializing || !isFormComplete
               ? "cursor-not-allowed bg-gray-300"
               : "bg-slate-900 shadow-sm hover:bg-slate-800"
           }`}
         >
-          {loading ? "保存中..." : "プロフィールを保存"}
+          {initializing ? "読み込み中..." : loading ? "保存中..." : "プロフィールを保存"}
         </motion.button>
       </form>
     </div>
