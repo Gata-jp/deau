@@ -38,6 +38,7 @@ export function ProfileSetupForm() {
   const [stationLoading, setStationLoading] = useState(false);
   const [stationError, setStationError] = useState("");
   const [stationSearched, setStationSearched] = useState(false);
+  const [selectedStationLabel, setSelectedStationLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,8 +53,8 @@ export function ProfileSetupForm() {
     preferenceGender.trim().length > 0 &&
     nearestStationId.trim().length > 0;
 
-  async function searchStations() {
-    const q = stationQuery.trim();
+  async function searchStations(query = stationQuery) {
+    const q = query.trim();
     setStationLoading(true);
     setStationError("");
     setStationSearched(true);
@@ -79,6 +80,16 @@ export function ProfileSetupForm() {
     // initial fetch only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!stationSearched) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void searchStations(stationQuery);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [stationQuery, stationSearched]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,7 +238,11 @@ export function ProfileSetupForm() {
               <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <input
                 value={stationQuery}
-                onChange={(e) => setStationQuery(e.target.value)}
+                onChange={(e) => {
+                  setStationQuery(e.target.value);
+                  setNearestStationId("");
+                  setSelectedStationLabel("");
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -255,7 +270,13 @@ export function ProfileSetupForm() {
                   <button
                     key={station.id}
                     type="button"
-                    onClick={() => setNearestStationId(station.id)}
+                    onClick={() => {
+                      setNearestStationId(station.id);
+                      setSelectedStationLabel(
+                        station.lineName ? `${station.name} (${station.lineName})` : station.name
+                      );
+                      setStationQuery(station.name);
+                    }}
                     className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
                       nearestStationId === station.id
                         ? "bg-slate-900 text-white"
@@ -275,6 +296,10 @@ export function ProfileSetupForm() {
 
         {selectedStation ? (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">選択中: {selectedStation.name}</p>
+        ) : selectedStationLabel ? (
+          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            選択中: {selectedStationLabel}
+          </p>
         ) : null}
         {stationError ? <p className="text-sm text-rose-700">{stationError}</p> : null}
         {stationSearched && !stationLoading && !stationError && stations.length === 0 ? (
