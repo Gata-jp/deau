@@ -80,6 +80,28 @@ npm run db:seed
 
 将来的に送信元を `no-reply@<your-domain>` にしたい場合は、Resend などの Custom SMTP + 独自ドメイン認証（SPF/DKIM）へ移行します。
 
+#### 2.5.1 テンプレート例（Supabase Magic Link）
+
+Supabase Dashboard の `Authentication -> Templates -> Magic Link` で、以下の件名/本文にすると「deau からのメール」であることが伝わりやすくなります。
+
+- Subject:
+
+```text
+【deau】ログインリンクのお知らせ
+```
+
+- Body (HTML):
+
+```html
+<h2>deau ログインリンク</h2>
+<p>deauをご利用いただきありがとうございます。</p>
+<p>以下のボタンからログインしてください（有効期限あり）。</p>
+<p><a href="{{ .ConfirmationURL }}">deauにログインする</a></p>
+<hr />
+<p>このメールに心当たりがない場合は、破棄してください。</p>
+<p>deau: https://deau.vercel.app</p>
+```
+
 ## 3. Implemented API endpoints
 
 - `POST /api/availabilities`
