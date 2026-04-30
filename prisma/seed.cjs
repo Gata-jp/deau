@@ -1,4 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
+const fs = require("fs");
+const path = require("path");
 
 const prisma = new PrismaClient();
 
@@ -10,8 +12,55 @@ function utcDate(daysFromNow, hour, minute) {
   return dt;
 }
 
+function parseStationsCsv() {
+  const csvPath = path.join(__dirname, "..", "data", "stations-kanto.csv");
+  const raw = fs.readFileSync(csvPath, "utf8");
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 2) return [];
+
+  const [header, ...rows] = lines;
+  const columns = header.split(",");
+  const index = Object.fromEntries(columns.map((name, i) => [name, i]));
+  const allowedPrefectures = new Set(["東京都", "埼玉県", "神奈川県", "千葉県"]);
+
+  return rows
+    .map((row) => row.split(","))
+    .filter((parts) => allowedPrefectures.has(parts[index.prefecture]))
+    .map((parts) => ({
+      externalCode: parts[index.externalCode],
+      name: parts[index.name],
+      kana: parts[index.kana] || null,
+      lineName: parts[index.lineName] || null,
+      operatorName: parts[index.operatorName] || null,
+      latitude: parts[index.latitude] ? Number(parts[index.latitude]) : null,
+      longitude: parts[index.longitude] ? Number(parts[index.longitude]) : null,
+    }));
+}
+
 async function main() {
   const seedNicknames = ["Aoi", "Riku", "Mio", "Haru"];
+  const seedUsers = await prisma.user.findMany({
+    where: { nickname: { in: seedNicknames } },
+    select: { id: true },
+  });
+  const seedUserIds = seedUsers.map((u) => u.id);
+
+  if (seedUserIds.length > 0) {
+    await prisma.chatMessage.deleteMany({
+      where: {
+        OR: [{ senderId: { in: seedUserIds } }, { match: { OR: [{ userAId: { in: seedUserIds } }, { userBId: { in: seedUserIds } }] } }],
+      },
+    });
+    await prisma.match.deleteMany({
+      where: {
+        OR: [{ userAId: { in: seedUserIds } }, { userBId: { in: seedUserIds } }],
+      },
+    });
+  }
 
   await prisma.availability.deleteMany({
     where: { user: { nickname: { in: seedNicknames } } },
@@ -23,40 +72,7 @@ async function main() {
     where: { nickname: { in: seedNicknames } },
   });
 
-  const stationSeeds = [
-    {
-      externalCode: "ST_SHINJUKU",
-      name: "新宿",
-      lineName: "JR山手線",
-      operatorName: "JR東日本",
-      latitude: 35.690921,
-      longitude: 139.700258,
-    },
-    {
-      externalCode: "ST_SHIBUYA",
-      name: "渋谷",
-      lineName: "JR山手線",
-      operatorName: "JR東日本",
-      latitude: 35.658034,
-      longitude: 139.701636,
-    },
-    {
-      externalCode: "ST_TOKYO",
-      name: "東京",
-      lineName: "JR山手線",
-      operatorName: "JR東日本",
-      latitude: 35.681236,
-      longitude: 139.767125,
-    },
-    {
-      externalCode: "ST_IKEBUKURO",
-      name: "池袋",
-      lineName: "JR山手線",
-      operatorName: "JR東日本",
-      latitude: 35.728926,
-      longitude: 139.71038,
-    },
-  ];
+  const stationSeeds = parseStationsCsv();
 
   const stations = {};
   for (const st of stationSeeds) {
