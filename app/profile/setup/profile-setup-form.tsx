@@ -53,7 +53,7 @@ export function ProfileSetupForm() {
     preferenceGender.trim().length > 0 &&
     nearestStationId.trim().length > 0;
 
-  async function searchStations(query = stationQuery) {
+  async function searchStations(query: string) {
     const q = query.trim();
     setStationLoading(true);
     setStationError("");
@@ -76,20 +76,15 @@ export function ProfileSetupForm() {
   }
 
   useEffect(() => {
-    void searchStations();
-    // initial fetch only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void searchStations("");
   }, []);
 
   useEffect(() => {
-    if (!stationSearched) {
-      return;
-    }
     const timer = window.setTimeout(() => {
       void searchStations(stationQuery);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [stationQuery, stationSearched]);
+  }, [stationQuery]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -246,7 +241,7 @@ export function ProfileSetupForm() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    void searchStations();
+                    void searchStations(stationQuery);
                   }
                 }}
                 placeholder="駅名 / 路線名 / かな で検索"
@@ -257,7 +252,7 @@ export function ProfileSetupForm() {
 
           <button
             type="button"
-            onClick={() => void searchStations()}
+            onClick={() => void searchStations(stationQuery)}
             className="rounded-xl border border-gray-300 px-4 py-2 text-sm text-gray-700 transition hover:bg-gray-50"
           >
             {stationLoading ? "検索中..." : "駅を検索"}
