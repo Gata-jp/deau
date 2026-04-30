@@ -66,6 +66,20 @@ npm run db:seed
 
 `GET /api/matches/run` でも同じバッチを起動できます。こちらは Vercel Cron を想定しており、`Authorization: Bearer <CRON_SECRET>` または `x-batch-secret` を受け付けます。
 
+### 2.5 Auth メール送信（現状運用）
+
+現時点では、認証メール（Magic Link）は **Supabase のデフォルト送信**を利用します（Custom SMTP は未使用）。
+
+- 目的: 初期運用で配信成功率を優先し、SMTP 設定トラブルを避ける
+- 必須設定:
+  - Supabase Auth の `Site URL` を `https://deau.vercel.app` に設定
+  - `Redirect URLs` に `https://deau.vercel.app/*` を追加
+- 推奨設定:
+  - Supabase Auth のメールテンプレート件名/本文に `deau` を明記
+  - 本文に `https://deau.vercel.app` を含め、ユーザーが送信元サービスを判別しやすくする
+
+将来的に送信元を `no-reply@<your-domain>` にしたい場合は、Resend などの Custom SMTP + 独自ドメイン認証（SPF/DKIM）へ移行します。
+
 ## 3. Implemented API endpoints
 
 - `POST /api/availabilities`
