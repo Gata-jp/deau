@@ -6,16 +6,18 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get("q") ?? "").trim();
-    if (!q) return ok({ stations: [] });
 
     const stations = await prisma.station.findMany({
-      where: {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { kana: { contains: q, mode: "insensitive" } },
-          { lineName: { contains: q, mode: "insensitive" } },
-        ],
-      },
+      where: q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { kana: { contains: q, mode: "insensitive" } },
+              { lineName: { contains: q, mode: "insensitive" } },
+              { operatorName: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
       select: {
         id: true,
         name: true,
@@ -23,6 +25,7 @@ export async function GET(request: Request) {
         latitude: true,
         longitude: true,
       },
+      orderBy: [{ name: "asc" }],
       take: 20,
     });
 

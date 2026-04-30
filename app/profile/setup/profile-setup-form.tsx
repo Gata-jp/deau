@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
@@ -33,6 +33,9 @@ export function ProfileSetupForm() {
   const [stationQuery, setStationQuery] = useState("");
   const [stations, setStations] = useState<Station[]>([]);
   const [nearestStationId, setNearestStationId] = useState("");
+  const [stationLoading, setStationLoading] = useState(false);
+  const [stationError, setStationError] = useState("");
+  const [stationSearched, setStationSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,14 +46,31 @@ export function ProfileSetupForm() {
 
   async function searchStations() {
     const q = stationQuery.trim();
-    if (!q) {
+    setStationLoading(true);
+    setStationError("");
+    setStationSearched(true);
+    try {
+      const response = await fetch(`/api/stations/search?q=${encodeURIComponent(q)}`);
+      const json = (await response.json()) as { ok?: boolean; data?: { stations?: Station[] } };
+      if (!response.ok || !json.ok) {
+        setStationError("駅検索に失敗しました。時間を置いて再試行してください。");
+        setStations([]);
+        return;
+      }
+      setStations(json.data?.stations ?? []);
+    } catch {
+      setStationError("駅検索に失敗しました。時間を置いて再試行してください。");
       setStations([]);
-      return;
+    } finally {
+      setStationLoading(false);
     }
-    const response = await fetch(`/api/stations/search?q=${encodeURIComponent(q)}`);
-    const json = (await response.json()) as { data?: { stations?: Station[] } };
-    setStations(json.data?.stations ?? []);
   }
+
+  useEffect(() => {
+    void searchStations();
+    // initial fetch only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,10 +157,19 @@ export function ProfileSetupForm() {
 
       <label>
         最寄り駅検索
-        <input value={stationQuery} onChange={(e) => setStationQuery(e.target.value)} />
+        <input
+          value={stationQuery}
+          onChange={(e) => setStationQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void searchStations();
+            }
+          }}
+        />
       </label>
-      <button type="button" onClick={searchStations}>
-        駅を検索
+      <button type="button" onClick={() => void searchStations()}>
+        {stationLoading ? "検索中..." : "駅を検索"}
       </button>
       <label>
         最寄り駅
@@ -156,6 +185,10 @@ export function ProfileSetupForm() {
       </label>
 
       {selectedStation ? <p>選択中: {selectedStation.name}</p> : null}
+      {stationError ? <p>{stationError}</p> : null}
+      {stationSearched && !stationLoading && !stationError && stations.length === 0 ? (
+        <p>該当する駅が見つかりませんでした。別のキーワードでお試しください。</p>
+      ) : null}
       {error ? <p>{error}</p> : null}
 
       <button type="submit" disabled={loading}>
