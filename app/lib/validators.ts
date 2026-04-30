@@ -25,5 +25,8 @@ export const updateProfileSchema = z.object({
   birthDate: z.coerce.date(),
   gender: z.enum(["MALE", "FEMALE", "NON_BINARY", "OTHER"]),
   preferenceGender: z.enum(["MALE", "FEMALE", "NON_BINARY", "ANY"]),
-  nearestStationId: z.string().cuid(),
+  nearestStationId: z.string().cuid().optional(),
+  prefecture: z.string().trim().min(1).max(20),
+  city: z.string().trim().min(1).max(80),
+  areaNote: z.string().trim().max(200).optional(),
 });

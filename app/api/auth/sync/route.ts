@@ -65,6 +65,8 @@ export async function POST(request: Request) {
         authUserId: true,
         email: true,
         nearestStationId: true,
+        prefecture: true,
+        city: true,
         birthDate: true,
         lastLoginAt: true,
       },

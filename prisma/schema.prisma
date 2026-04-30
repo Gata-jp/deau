@@ -50,6 +50,9 @@ model User {
 
   nearestStationId String?
   nearestStation   Station?          @relation("NearestStation", fields: [nearestStationId], references: [id], onDelete: SetNull)
+  prefecture       String?           @db.VarChar(20)
+  city             String?           @db.VarChar(80)
+  areaNote         String?           @db.VarChar(200)
 
   stripeCustomerId String?           @unique
   penaltyPoints    Int               @default(0)
@@ -71,6 +74,7 @@ model User {
   @@index([gender, preferenceGender])
   @@index([matchingEnabled, isActive])
   @@index([lastMatchedUserId])
+  @@index([prefecture, city])
 }
 
 model Availability {

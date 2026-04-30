@@ -30,6 +30,9 @@ export function ProfileSetupForm() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [prefecture, setPrefecture] = useState("");
+  const [city, setCity] = useState("");
+  const [areaNote, setAreaNote] = useState("");
   const [gender, setGender] = useState<(typeof genders)[number]["value"]>("OTHER");
   const [preferenceGender, setPreferenceGender] = useState<(typeof preferenceGenders)[number]["value"]>("ANY");
   const [stationQuery, setStationQuery] = useState("");
@@ -49,9 +52,10 @@ export function ProfileSetupForm() {
   const isFormComplete =
     nickname.trim().length > 0 &&
     birthDate.trim().length > 0 &&
+    prefecture.trim().length > 0 &&
+    city.trim().length > 0 &&
     gender.trim().length > 0 &&
-    preferenceGender.trim().length > 0 &&
-    nearestStationId.trim().length > 0;
+    preferenceGender.trim().length > 0;
 
   async function searchStations(query: string) {
     const q = query.trim();
@@ -109,9 +113,12 @@ export function ProfileSetupForm() {
         body: JSON.stringify({
           nickname,
           birthDate,
+          prefecture,
+          city,
+          areaNote: areaNote.trim() || undefined,
           gender,
           preferenceGender,
-          nearestStationId,
+          nearestStationId: nearestStationId || undefined,
         }),
       });
 
@@ -176,6 +183,50 @@ export function ProfileSetupForm() {
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="grid grid-cols-2 gap-3"
+        >
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-700">都道府県</span>
+            <input
+              value={prefecture}
+              onChange={(e) => setPrefecture(e.target.value)}
+              required
+              placeholder="東京都"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-700">市区町村</span>
+            <input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+              placeholder="渋谷区"
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+            />
+          </label>
+        </motion.div>
+
+        <motion.label
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+          className="block"
+        >
+          <span className="mb-1 block text-sm font-medium text-gray-700">活動エリアメモ（任意）</span>
+          <input
+            value={areaNote}
+            onChange={(e) => setAreaNote(e.target.value)}
+            maxLength={200}
+            placeholder="新宿・渋谷・池袋あたり"
+            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+          />
+        </motion.label>
+
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.11 }}
         >
           <p className="mb-2 text-sm font-medium text-gray-700">あなたの性別</p>
@@ -228,7 +279,7 @@ export function ProfileSetupForm() {
           className="space-y-2"
         >
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">最寄り駅検索</span>
+            <span className="mb-1 block text-sm font-medium text-gray-700">最寄り駅検索（任意）</span>
             <div className="relative">
               <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <input

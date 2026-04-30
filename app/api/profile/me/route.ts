@@ -18,6 +18,9 @@ export async function GET(request: Request) {
         gender: true,
         preferenceGender: true,
         nearestStationId: true,
+        prefecture: true,
+        city: true,
+        areaNote: true,
         matchingEnabled: true,
         lastLoginAt: true,
       },
@@ -39,12 +42,14 @@ export async function PUT(request: Request) {
     const userId = await getAuthUserId(request);
     const body = updateProfileSchema.parse(await request.json());
 
-    const station = await prisma.station.findUnique({
-      where: { id: body.nearestStationId },
-      select: { id: true },
-    });
-    if (!station) {
-      throw new ApiError(400, "INVALID_STATION", "Station not found");
+    if (body.nearestStationId) {
+      const station = await prisma.station.findUnique({
+        where: { id: body.nearestStationId },
+        select: { id: true },
+      });
+      if (!station) {
+        throw new ApiError(400, "INVALID_STATION", "Station not found");
+      }
     }
 
     const user = await prisma.user.update({
@@ -54,7 +59,10 @@ export async function PUT(request: Request) {
         birthDate: body.birthDate,
         gender: body.gender,
         preferenceGender: body.preferenceGender,
-        nearestStationId: body.nearestStationId,
+        nearestStationId: body.nearestStationId ?? null,
+        prefecture: body.prefecture,
+        city: body.city,
+        areaNote: body.areaNote ?? null,
         matchingEnabled: true,
       },
       select: {
@@ -64,6 +72,9 @@ export async function PUT(request: Request) {
         gender: true,
         preferenceGender: true,
         nearestStationId: true,
+        prefecture: true,
+        city: true,
+        areaNote: true,
         matchingEnabled: true,
       },
     });
