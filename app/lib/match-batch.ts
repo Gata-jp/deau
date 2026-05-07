@@ -99,6 +99,8 @@ type PairCandidate = {
   waitDaysB: number;
   regionPriority: number;
   tokyoPriorityBucket: number;
+  tokyoMinutesA: number | null;
+  tokyoMinutesB: number | null;
 };
 
 function getTokyoPriorityBucket(minutesA: number | null, minutesB: number | null): number {
@@ -215,15 +217,17 @@ function buildCandidate(
 
   if (!meetupStationId) return null;
 
+  let tokyoMinutesA: number | null = null;
+  let tokyoMinutesB: number | null = null;
   let tokyoPriorityBucket = 3;
   if (tokyoStation && userA.nearestStation && userB.nearestStation) {
-    const travelAToTokyo = estimateTravelMinutesFromDistance(
+    tokyoMinutesA = estimateTravelMinutesFromDistance(
       calculateDistanceKm(userA.nearestStation, tokyoStation)
     );
-    const travelBToTokyo = estimateTravelMinutesFromDistance(
+    tokyoMinutesB = estimateTravelMinutesFromDistance(
       calculateDistanceKm(userB.nearestStation, tokyoStation)
     );
-    tokyoPriorityBucket = getTokyoPriorityBucket(travelAToTokyo, travelBToTokyo);
+    tokyoPriorityBucket = getTokyoPriorityBucket(tokyoMinutesA, tokyoMinutesB);
   }
 
   const userAAgeAtMatch = getAgeAtDate(userA.birthDate, now);
@@ -245,6 +249,8 @@ function buildCandidate(
     waitDaysB: getWaitDays(userB, now),
     regionPriority,
     tokyoPriorityBucket,
+    tokyoMinutesA,
+    tokyoMinutesB,
   };
 }
 
@@ -290,6 +296,7 @@ export async function runDailyMatchBatch(prisma: PrismaClient, request: Request)
   assertBatchSecret(request);
 
   const now = new Date();
+  const debug = new URL(request.url).searchParams.get("debug") === "1";
   const expiredCount = await expireTimedOutMatches(prisma, now);
   const users = await prisma.user.findMany({
     where: {
@@ -344,8 +351,8 @@ export async function runDailyMatchBatch(prisma: PrismaClient, request: Request)
     take: 1000,
   });
 
-  const tokyoStation = await prisma.station.findFirst({
-    where: { name: "東京" },
+  const tokyoStation = await prisma.station.findUnique({
+    where: { externalCode: "ST_TOKYO" },
     select: { id: true, latitude: true, longitude: true },
   });
 
@@ -371,6 +378,20 @@ export async function runDailyMatchBatch(prisma: PrismaClient, request: Request)
   }
 
   sortCandidates(candidates);
+  const debugPreview = debug
+    ? candidates.slice(0, 30).map((c) => ({
+        userAId: c.userA.id,
+        userBId: c.userB.id,
+        regionPriority: c.regionPriority,
+        tokyoPriorityBucket: c.tokyoPriorityBucket,
+        tokyoMinutesA: c.tokyoMinutesA,
+        tokyoMinutesB: c.tokyoMinutesB,
+        travelTimeBucket: c.travelTimeBucket,
+        travelMinutes: c.travelMinutes,
+        meetupAt: c.meetupAt,
+        meetupStationId: c.meetupStationId,
+      }))
+    : undefined;
 
   const usedUserIds = new Set<string>();
   const createdMatches: string[] = [];
@@ -469,5 +490,13 @@ export async function runDailyMatchBatch(prisma: PrismaClient, request: Request)
     matchedCount: createdMatches.length,
     createdMatchIds: createdMatches,
     skippedCount: users.length - usedUserIds.size,
+    debug: debug
+      ? {
+          tokyoStationExternalCode: "ST_TOKYO",
+          tokyoStationFound: Boolean(tokyoStation),
+          previewCount: debugPreview?.length ?? 0,
+          preview: debugPreview,
+        }
+      : undefined,
   };
 }
