@@ -1,6 +1,7 @@
 {
   "name": "deau (Next.js + Prisma + PostgreSQL)",
   "install": "bash .cursor/scripts/install.sh",
+  "user": "ubuntu",
   "start": "bash .cursor/scripts/start.sh",
   "terminals": [
     {
