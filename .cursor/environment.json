@@ -5,7 +5,8 @@
   "terminals": [
     {
       "name": "dev",
-      "command": "npm run dev"
+      "command": "bash .cursor/scripts/start.sh && npm run dev",
+      "description": "Ensures the local PostgreSQL is up, then runs the Next.js dev server on port 3000."
     }
   ],
   "ports": [
